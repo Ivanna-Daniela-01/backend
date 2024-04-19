@@ -2,18 +2,8 @@
 'use strict';
 
 const Person = require('../models/person');
-'use strict';
 
-const { Pool } = require('pg');
-
-// Create a new Pool instance to handle PostgreSQL connections
-const pool = new Pool({
-  user: 'postgres',
-  host: 'localhost',
-  database: 'Users',
-  password: 'abc123',
-  port: 5432, // Default PostgreSQL port
-});
+const pool = require('../db');
 
 // Controller function to save a new person
 async function savePerson(req, res) {
