@@ -76,8 +76,54 @@ const personController = {
         // Send error response
         res.status(500).json({ message: 'Error deleting person' });
       }
+  },
+  async updatePerson(req,res){
+    try {
+        const personId = req.params.id;
+        const { name, lastname, mail, password } = req.body;
+    
+        // Build the SET clause for the SQL query dynamically based on the provided attributes
+        let setClause = '';
+        let values = [];
+        let index = 1;
+    
+        if (name) {
+          setClause += `name = $${index}, `;
+          values.push(name);
+          index++;
+        }
+        if (lastname) {
+          setClause += `lastname = $${index}, `;
+          values.push(lastname);
+          index++;
+        }
+        if (mail) {
+          setClause += `mail = $${index}, `;
+          values.push(mail);
+          index++;
+        }
+        if (password) {
+          setClause += `password = $${index}, `;
+          values.push(password);
+          index++;
+        }
+    
+        // Remove the trailing comma and space from the setClause
+        setClause = setClause.slice(0, -2);
+    
+        // Execute SQL query to update the person's data by ID
+        const query = `UPDATE person SET ${setClause} WHERE id = $${index}`;
+        values.push(personId);
+        await pool.query(query, values);
+    
+        // Send success response
+        res.status(200).json({ message: 'Person updated successfully', updatedId: personId });
+      } catch (error) {
+        console.error('Error updating person:', error);
+        // Send error response
+        res.status(500).json({ message: 'Error updating person' });
+      }
   }
-  
 };
 
 module.exports = personController;
