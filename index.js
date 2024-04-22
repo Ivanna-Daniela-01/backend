@@ -3,6 +3,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const pool = require('./db'); // Import the pool instance from db.js
+const cors = require('cors'); // Import the cors middleware
 
 const app = express();
 const port = 3700;
@@ -11,6 +12,9 @@ const port = 3700;
 
 // Middleware to parse request body as JSON
 app.use(bodyParser.json());
+
+// CORS middleware
+app.use(cors());
 
 // Use the personRoute for handling person-related routes
 const personRoute = require('./routes/person.route');

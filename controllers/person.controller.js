@@ -45,7 +45,7 @@ const personController = {
     } catch (error) {
       console.error('Error fetching persons:', error);
       // Send error response
-      res.status(500).json({ message: 'Error fetching persons' });
+      res.status(500).json({ message: 'Error fetching persons' || error.message});
     }
   },
 
