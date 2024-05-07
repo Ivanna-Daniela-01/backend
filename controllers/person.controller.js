@@ -153,25 +153,56 @@ const personController = {
     }
 },
 
-// Function Retrieve the authenticated user's information from the request object
-async getAuthenticatedUserInfo(req, res) {
-  try { 
-      const { id, mail } = req.user;
+// FunctionTOLOGOUT
+async logout(req, res) {
+  try {
+      // Obtener el correo electrónico del usuario desde el token JWT
+      //const userEmail = req.user.mail;
 
-      // Query the database to get the user's information
-      const user = await pool.query('SELECT id, name, lastname, mail FROM person WHERE id = $1', [id]);
+      // Destruir la sesión del usuario
+      req.session.destroy();
+      //req.logout();
 
-      if (user.rows.length === 0) {
-          return res.status(404).json({ message: 'User not found' });
-      }
+      // Imprimir un mensaje de despedida en la consola
+      //console.log(`Adiós ${userEmail}, has cerrado sesión exitosamente.`);
 
-      // Send the user's information in the response
-      res.status(200).json(user.rows[0]);
+      // Enviar una respuesta al cliente
+      res.status(200).json({ message: `Adiós , has cerrado sesión exitosamente.` });
   } catch (error) {
-      console.error('Error fetching user information:', error);
-      res.status(500).json({ message: 'Error fetching user information' || error.message});
+      console.error('Error logging out:', error);
+      res.status(500).json({ message: error.message || 'Error logging out' });
+  }
+},
+
+async obtenerPerfil(req, res) {
+  try {
+    // Verify if the user is authenticated
+    if (!req.user) {
+      return res.status(401).json({ message: 'User not authenticated' });
+    }
+
+    // Get the user ID from the authenticated user data
+    const userId = req.user.id;
+
+    // Query the database to get the user's name
+    const user = await pool.query('SELECT name FROM person WHERE id = $1', [userId]);
+
+    // Check if the user was found
+    if (user.rows.length === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Extract the user's name from the query results
+    const userName = user.rows[0].name;
+
+    // Send the response with the user's name
+    res.status(200).json({ userName });
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    res.status(500).json({ message: error.message || 'Error fetching user profile' });
   }
 }
+
 };
 
 module.exports = personController;

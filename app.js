@@ -1,74 +1,70 @@
-'use strict'
-var express = require('express');
-var podyParser = require('body-parser');
+'use strict';
+
+const express = require('express');
 const bodyParser = require('body-parser');
-var app = express();
-var sessions=require('express-session');
-var cookieParser=require('cookie-parser');
+const cookieParser = require('cookie-parser');
+const session = require('express-session');
 const passport = require('passport');
-const passportJWT = require('passport-jwt');
+
+const pool = require('../db');
+const JwtStrategy = require('passport-jwt').Strategy;
+const ExtractJwt = require('passport-jwt').ExtractJwt;
+
+const personRoutes = require('./routes/person.route');
 require('dotenv').config();
 
-var personRoutes=require('./routes/person.route');
-app.use(bodyParser.urlencoded({extended:false}));
+const app = express();
+
+// Body parser middleware
+app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
-
-app.use(cookieParser());
-app.use('/',personRoutes);
-
-/////////////////session
 // Cookie parser middleware
 app.use(cookieParser());
 
 // Session middleware
-app.use(sessions({
-    secret: process.env.JWT_SECRET || 'secret',
+app.use(session({
+    secret: process.env.JWT_SECRET, // Use a secret key for session
     resave: false,
-    saveUninitialized: false
+    saveUninitialized: true,
+    cookie: { maxAge: 1000 * 60 * 60 * 24 } // 24 hours
 }));
 
 // Passport middleware
 app.use(passport.initialize());
 app.use(passport.session());
 
-// JWT authentication strategy
-const JWTStrategy = passportJWT.Strategy;
-const ExtractJWT = passportJWT.ExtractJwt;
+const jwtOptions = {
+    jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+    secretOrKey: process.env.JWT_SECRET
+};
 
-passport.use(new JWTStrategy({
-    jwtFromRequest: ExtractJWT.fromAuthHeaderAsBearerToken(),
-    secretOrKey: process.env.JWT_SECRET // Use the JWT secret key from environment variables
-}, (jwtPayload, done) => {
-    // You can perform database operations here to validate the user based on the JWT payload
-    // For simplicity, assuming the payload contains user information
-    return done(null, jwtPayload);
+passport.use(new JwtStrategy(jwtOptions, async (jwtPayload, done) => {
+    try {
+        // Perform database lookup to find the user based on the JWT payload
+        const user = await pool.query('SELECT id, mail FROM person WHERE id = $1', [jwtPayload.id]);
+
+        if (user.rows.length === 0) {
+            return done(null, false);
+        }
+
+        // User found, return the user object
+        return done(null, user.rows[0]);
+    } catch (error) {
+        return done(error, false);
+    }
 }));
 
-///////////////////////
+// Routes
+app.use('/', personRoutes);
 
-app.use((req,res,next)=>{
-    res.header('Access-Control-Allow-Origin','*');
-    res.header('Access-Control-Allow-Headers','Authorization, X-API-KEY, X-Request-With, Content-Type,Accept, Access-Control-Allow, Request-Method')
-    res.header('Access-Control-Allow-Methods','GET, POST, OPTIONS, PUT, DELETE');
-    res.header('Allow','GET, POST, OPTIONS, PUT, DELETE');
-    res.header('Access-Control-Allow-Credentials',true);
+// CORS middleware
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers', 'Authorization, X-API-KEY, X-Request-With, Content-Type, Accept, Access-Control-Allow, Request-Method');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE');
+    res.header('Allow', 'GET, POST, OPTIONS, PUT, DELETE');
+    res.header('Access-Control-Allow-Credentials', true);
     next();
 });
 
-//la creaci[on dura 24 horas en milisegundos]
-const oneDay=1000*60*60*24;
-//agregar a nuestro app el uso de sesiones
-app.use(sessions({
-    //es una clave que se genera randomicamente en tiempo de ejecucion cuando esta en produccion
-    secret:"44aa275748be986d768ec9d300093aacbf4e410c2bfabafed4028d6b25434470",
-    //sirve para enviar cualquier sesion al almacen
-    saveUninitialized:true,
-    cookie:{maxAge:oneDay},
-    //impide que la sesion se quede guardada aunque no se haya cambiado
-    resave:false
-}));
-
-module.exports = {
-    app,
-    passport
-};
+module.exports = app;
