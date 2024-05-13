@@ -27,15 +27,11 @@ const personController = {
   // Function to fetch all persons from the database
   async getPerson(req, res) {
     try {
-      // Execute SQL query to fetch all rows from the person table
-      const results = await pool.query('SELECT * FROM person');
-  
-      // Send success response with the rows fetched from the database
-      res.status(200).json(results.rows);
+      const persons = await personRepository.getAllPersons();
+      res.status(200).json(persons);
     } catch (error) {
       console.error('Error fetching persons:', error);
-      // Send error response
-      res.status(500).json({ message: 'Error fetching persons' || error.message});
+      res.status(500).json({ message: 'Error fetching persons' || error.message });
     }
   },
 

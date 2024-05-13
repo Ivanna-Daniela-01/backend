@@ -15,15 +15,16 @@ const personRepository = {
     }
   },
 
-  async getPerson(id) {
+  async getAllPersons() {
     try {
-      const query = 'SELECT * FROM person WHERE id = $1';
-      const result = await pool.query(query, [id]);
-      return result.rows[0];
+      const query = 'SELECT * FROM person';
+      const result = await pool.query(query);
+      return result.rows;
     } catch (error) {
-      throw new Error('Error fetching person: ' + error.message);
+      throw new Error('Error fetching all persons: ' + error.message);
     }
   },
+  
 
   async deletePerson(id) {
     try {
