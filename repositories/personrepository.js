@@ -36,28 +36,34 @@ const personRepository = {
     }
   },
 
-  async updatePerson(id, name, lastname, mail, password) {
+  async updatePerson(id, updatedFields) {
     try {
-      // Construct update query dynamically
-      let updateClause = '';
-      const values = [];
-      
-      if (name) {
-        updateClause += 'name = $1, ';
-        values.push(name);
-      }
-      // Add other fields as needed
-      
-      values.push(id);
-      const query = `UPDATE person SET ${updateClause.slice(0, -2)} WHERE id = $${values.length}`;
-      
-      await pool.query(query, values);
-      return { message: 'Person updated successfully' };
-    } catch (error) {
-      throw new Error('Error updating person: ' + error.message);
-    }
-  },
+        let query = 'UPDATE person SET';
+        const values = [];
+        const fieldsToUpdate = [];
 
+        // Construct the SET clause dynamically
+        let paramCount = 1; // Counter for parameter placeholders
+        Object.entries(updatedFields).forEach(([key, value]) => {
+            if (key === 'password') {
+                const hashedPassword =  bcrypt.hash(value, 10);
+                fieldsToUpdate.push(`${key} = $${paramCount}`);
+                values.push(hashedPassword);
+            } else {
+                fieldsToUpdate.push(`${key} = $${paramCount}`);
+                values.push(value);
+            }
+            paramCount++;
+        });
+
+        query += ' ' + fieldsToUpdate.join(', ') + ' WHERE id = $' + paramCount;
+        values.push(id);
+
+        await pool.query(query, values);
+    } catch (error) {
+        throw new Error('Error updating person by ID: ' + error.message);
+    }
+},
   async findByMail(mail) {
     try {
       const query = 'SELECT * FROM person WHERE mail = $1';

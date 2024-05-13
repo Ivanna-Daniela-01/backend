@@ -38,11 +38,9 @@ const personController = {
   // Function to delete a specific person from the database
   async deletePerson(req, res) {
     try {
+    
       const personId = req.params.id;
-    
-      // Execute SQL query to delete the person by ID
-      await pool.query('DELETE FROM person WHERE id = $1', [personId]);
-    
+      await personRepository.deletePerson(personId);
       // Send success response
       res.status(200).json({ message: 'Person deleted successfully', deletedId: personId });
     } catch (error) {
@@ -55,66 +53,44 @@ const personController = {
   // Function to update a specific person in the database
   async updatePerson(req, res) {
     try {
-      const personId = req.params.id;
-      const { name, lastname, mail, password } = req.body;
+        const personId = req.params.id;
+        const { name, lastname, mail, password } = req.body;
 
-      // Build the SET clause for the SQL query dynamically based on the provided attributes
-      let setClause = '';
-      const values = [];
-      
-      if (name) {
-        setClause += 'name = $1, ';
-        values.push(name);
-      }
-      if (lastname) {
-        setClause += 'lastname = $2, ';
-        values.push(lastname);
-      }
-      if (mail) {
-        setClause += 'mail = $3, ';
-        values.push(mail);
-      }
-      if (password) {
-        const hashedPassword = await bcrypt.hash(password, 10);
-        setClause += 'password = $4, ';
-        values.push(hashedPassword);
-      }
+        // Construct an object with the updated fields
+        const updatedFields = {};
+        if (name) updatedFields.name = name;
+        if (lastname) updatedFields.lastname = lastname;
+        if (mail) updatedFields.mail = mail;
+        if (password) updatedFields.password = password;
 
-      // Remove the trailing comma and space from the setClause
-      setClause = setClause.slice(0, -2);
+        // Update the person entity using the repository method
+        await personRepository.updatePerson(personId, updatedFields);
 
-      // Add the personId to the values array
-      values.push(personId);
-
-      // Execute SQL query to update the person's data by ID
-      const query = `UPDATE person SET ${setClause} WHERE id = $${values.length}`;
-      await pool.query(query, values);
-
-      // Send success response
-      res.status(200).json({ message: 'Person updated successfully', updatedId: personId });
+        // Send success response
+        res.status(200).json({ message: 'Person updated successfully', updatedId: personId });
     } catch (error) {
-      console.error('Error updating person:', error);
-      // Send error response
-      res.status(500).json({ message: 'Error updating person' });
+        console.error('Error updating person:', error);
+        // Send error response
+        res.status(500).json({ message: 'Error updating person' });
     }
-  },
+}
+,
 
   //Function to login
   async login(req, res) {
     try {
         const { mail, password } = req.body;
 
-        // Check if the user with the provided email exists in the database
-        const user = await pool.query('SELECT * FROM person WHERE mail = $1', [mail]);
+        // Fetch user by email
+        const user = await personRepository.findByMail(mail);
 
-        if (user.rows.length === 0) {
+        // Check if the user exists
+        if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        const userData = user.rows[0];
-
-        // Compare the provided password with the hashed password stored in the database
-        const passwordMatch = await bcrypt.compare(password, userData.password);
+        // Compare the provided password with the hashed password stored in the retrieved user object
+        const passwordMatch = await bcrypt.compare(password, user.password);
 
         if (!passwordMatch) {
             return res.status(401).json({ message: 'Invalid credentials' });
@@ -122,7 +98,7 @@ const personController = {
 
         // If the credentials are valid, generate a JWT token
         const token = jwt.sign(
-            { id: userData.id, mail: userData.mail },
+            { id: user.id, mail: user.mail },
             process.env.JWT_SECRET,
             { expiresIn: '1h' } // Token expiration time
         );
@@ -133,7 +109,8 @@ const personController = {
         console.error('Error logging in:', error);
         res.status(500).json({ message: 'Error logging in' || error.message });
     }
-},
+}
+,
 
 // FunctionTOLOGOUT
 async logout(req, res) {
