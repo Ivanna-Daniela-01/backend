@@ -6,29 +6,15 @@ const pool = require('../db');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
+const personRepository = require('../repositories/personrepository');
+
 
 const personController = {
   // Function to save a new person
   async savePerson(req, res) {
     try {
       const { name, lastname, mail, password } = req.body;
-
-      // Check if the email already exists in the database
-      const emailExists = await pool.query('SELECT * FROM person WHERE mail = $1', [mail]);
-
-      if (emailExists.rows.length > 0) {
-        return res.status(400).json({ message: 'User with this email already exists' });
-      }
-
-      // Hash the password
-      const hashedPassword = await bcrypt.hash(password, 10);
-
-      // Execute the query to insert the person's data into the database
-      const query = 'INSERT INTO person (name, lastname, mail, password) VALUES ($1, $2, $3, $4)';
-      const values = [name, lastname, mail, hashedPassword];
-
-      await pool.query(query, values);
-
+      const person = await personRepository.savePerson(name, lastname, mail, password);
       // Send success response
       res.status(200).json({ message: 'Person saved successfully', requestBody: req.body });
     } catch (error) {
