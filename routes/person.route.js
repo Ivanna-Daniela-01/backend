@@ -3,6 +3,7 @@
 const express = require('express');
 const router = express.Router();
 const personController = require('../controllers/person.controller');
+const personAuthController= require('../controllers/person.auth.controller');
 const passport = require('passport');
 const jwt = require('jsonwebtoken');
 
@@ -18,11 +19,11 @@ router.put('/updatePerson/:id', personController.updatePerson);
 // Route to get authenticated user information
 //router.get('/profile', passport.authenticate('jwt', { session: false }), personController.getAuthenticatedUserInfo);
 // Route for user login
-router.post('/login', personController.login);
+router.post('/login', personAuthController.login);
 //rOUTE TO USER LOGOUT
-router.get('/logout', personController.logout);
+router.get('/logout', personAuthController.logout);
 
-router.get('/perfil', passport.authenticate('jwt', { session: false }), personController.obtenerPerfil);
+router.get('/perfil', passport.authenticate('jwt', { session: false }), personAuthController.obtenerPerfil);
 
 
 function verifyToken(req, res, next) {
